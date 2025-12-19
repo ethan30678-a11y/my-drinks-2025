@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2025 手搖年度回顧</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        :root {
+            /* B：奶茶米色＋焦糖棕 [web:58][web:61] */
+            --bg-color: #f4eee7;
+            --text-main: #2f251e;
+            --text-sub: #7b6a5c;
+
+            --accent: #c9713d;
+            --accent-gradient: linear-gradient(
+                135deg,
+                #f3a872 0%,
+                #c9713d 40%,
+                #7b4b28 85%
+            );
+
+            --card-bg: #ffffff;
+            --card-border: rgba(122, 93, 66, 0.18);
+            --card-shadow: 0 18px 40px rgba(122, 93, 66, 0.20);
+            --progress-bg: rgba(122, 93, 66, 0.30);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: radial-gradient(circle at top, #f9f3ec 0%, var(--bg-color) 55%);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .progress-container {
+            display: flex;
+            gap: 4px;
+            padding: 10px 10px;
+            width: 100%;
+            z-index: 100;
+        }
+
+        .progress-bar {
+            flex: 1;
+            height: 3px;
+            background-color: var(--progress-bg);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-image: var(--accent-gradient);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .progress-bar.active .progress-fill { width: 100%; }
+        .progress-bar.visited .progress-fill { width: 100%; }
+
+        .story-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .slide {
+            position: absolute;
+            inset: 0;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 26px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        .slide.active {
+            display: flex;
+            opacity: 1;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h1 { font-size: 2.4rem; font-weight: 800; margin-bottom: 18px; line-height: 1.2; letter-spacing: -0.5px; }
+        h2 { font-size: 1.4rem; color: var(--accent); margin-bottom: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
+        h3 { font-size: 4.2rem; font-weight: 900; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 18px 0; }
+        p { font-size: 1.05rem; line-height: 1.6; color: var(--text-sub); max-width: 620px; }
+
+        .highlight { color: var(--text-main); font-weight: 600; }
+        .big-text { font-size: 1.35rem; color: var(--text-main); font-weight: 500; }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 22px;
+            padding: 26px 24px;
+            width: 100%;
+            max-width: 380px;
+            backdrop-filter: blur(12px);
+            box-shadow: var(--card-shadow);
+            margin-top: 20px;
+        }
+
+        .list-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            text-align: left;
+        }
+        .list-item:last-child { border-bottom: none; }
+        .rank { font-weight: 900; color: #c9713d; margin-right: 12px; width: 22px; }
+        .name { flex: 1; font-weight: 500; color: var(--text-main); }
+        .count { color: var(--text-sub); font-size: 0.9rem; text-align: right; }
+
+        .brand-logo-img {
+            width: 64px;
+            height: 64px;
+            border-radius: 18px;
+            object-fit: contain;
+            background-color: #ffffff;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+
+        .brand-name {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-top: 10px;
+        }
+
+        .chart-container {
+            width: 100%;
+            max-width: 420px;
+            height: 300px;
+            margin-top: 28px;
+        }
+
+        .personality-type {
+            font-size: 3rem;
+            font-weight: 900;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 20px 0;
+        }
+
+        .quote {
+            font-style: italic;
+            border-left: 3px solid rgba(122, 93, 66, 0.55);
+            padding-left: 18px;
+            margin-top: 26px;
+            text-align: left;
+        }
+
+        .tap-area {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            z-index: 50;
+        }
+        .left { left: 0; }
+        .right { right: 0; }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2rem; }
+            h3 { font-size: 3.2rem; }
+            .card { padding: 22px 18px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="progress-container" id="progressContainer"></div>
+
+    <div class="tap-area left" onclick="prevSlide()"></div>
+    <div class="tap-area right" onclick="nextSlide()"></div>
+
+    <div class="story-container">
+        <!-- P1 -->
+        <div class="slide active">
+            <h2>2025 Wrapped</h2>
+            <h1>你的<br>手搖年度回顧</h1>
+            <p>準備好面對 548 杯的真相了嗎？</p>
+        </div>
+
+        <!-- P2 -->
+        <div class="slide">
+            <h2>年度總結</h2>
+            <p>這一年，你的血液裡流淌著...</p>
+            <h3>548 杯</h3>
+            <p class="big-text">平均每天大約 1.5 杯</p>
+            <p style="margin-top:10px;">如果手搖是水，那你就是魚。</p>
+        </div>
+
+        <!-- P3 -->
+        <div class="slide">
+            <h2>投資總額</h2>
+            <p>為了快樂，你總共貢獻了</p>
+            <h3>$33,500</h3>
+            <p>這筆錢足以好好規劃一趟國外旅行，但你選擇投資在日常的小確幸。</p>
+            <p style="font-size: 0.9rem; margin-top: 20px;">快樂雖然不便宜，但非常值得。</p>
+        </div>
+
+        <!-- P4 -->
+        <div class="slide">
+            <h2>壯觀成就</h2>
+            <p>如果把這 548 個杯子疊起來...</p>
+            <h3>41.1 公尺</h3>
+            <p class="big-text">大約等於 13 層樓高</p>
+            <p>或是 24 個你疊羅漢的高度，畫面非常壯觀。</p>
+        </div>
+
+        <!-- P5 -->
+        <div class="slide">
+            <h2>全勤紀錄</h2>
+            <p>在 365 天當中，有</p>
+            <h1>306 天</h1>
+            <p class="big-text">你手裡都拿著一杯飲料</p>
+            <p>只有 59 天沒有手搖，等於一年裡幾乎天天都有儀式感。</p>
+        </div>
+
+        <!-- P6 -->
+        <div class="slide">
+            <h2>堅持不懈</h2>
+            <p>你最長連續喝飲料的紀錄是</p>
+            <h3>76 天</h3>
+            <p>整整兩個半月，風雨無阻，手搖成了生活節奏的一部分。</p>
+        </div>
+
+        <!-- P7 -->
+        <div class="slide">
+            <h2>月度趨勢</h2>
+            <p>這是一整年心情與手搖的波形圖。</p>
+            <div class="chart-container">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+            <p style="margin-top:20px; font-size:0.9rem;">5 月與 11 月是你特別需要飲料陪伴的月份。</p>
+        </div>
+
+        <!-- P8 -->
+        <div class="slide">
+            <h2>瘋狂的一天</h2>
+            <p>還記得那個最瘋狂的日子嗎？</p>
+            <h3>5 杯</h3>
+            <p>那天你不是在慶祝，就是在拯救心情。</p>
+            <p class="big-text">單日最高花費約 $320。</p>
+        </div>
+
+        <!-- P9 -->
+        <div class="slide">
+            <h2>你的舒適圈</h2>
+            <h1>Top 5<br>最愛店家</h1>
+            <p>有些店已經變成你的「指定安全區域」，走進去就很安心。</p>
+        </div>
+
+        <!-- P10 得正 -->
+        <div class="slide">
+            <h2>年度 MVP 品牌</h2>
+            <div class="card">
+                <img src="De-Zheng.jpg" alt="得正 Logo" class="brand-logo-img">
+                <div class="brand-name">得正 Oolong Tea Project</div>
+                <p style="margin-top:10px; font-size:0.95rem;">
+                    # 原茶系列 · # 雙柚金烏龍 · # 烘吉奶茶
+                </p>
+                <h3 style="font-size:3rem; margin-top:18px;">165 杯</h3>
+                <p>約佔你全年杯數的 30% 左右，等於每兩三天就要報到一次。</p>
+            </div>
+        </div>
+
+        <!-- P11 Top2-5 -->
+        <div class="slide">
+            <h2>後援團品牌</h2>
+            <div class="card">
+                <div class="list-item">
+                    <span class="rank">2</span>
+                    <span class="name">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <img src="Da-Ming.jpg" alt="大茗 Logo" class="brand-logo-img">
+                            <span>大茗</span>
+                        </div>
+                    </span>
+                    <span class="count">約 50 杯</span>
+                </div>
+                <div class="list-item">
+                    <span class="rank">3</span>
+                    <span class="name">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <img src="Gui-Ji.jpg" alt="龜記 Logo" class="brand-logo-img">
+                            <span>龜記茗品</span>
+                        </div>
+                    </span>
+                    <span class="count">約 34 杯</span>
+                </div>
+                <div class="list-item">
+                    <span class="rank">4</span>
+                    <span class="name">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <img src="UG.jpg" alt="UG Logo" class="brand-logo-img">
+                            <span>UG</span>
+                        </div>
+                    </span>
+                    <span class="count">約 21 杯</span>
+                </div>
+                <div class="list-item">
+                    <span class="rank">5</span>
+                    <span class="name">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <img src="Qing-Shan.jpg" alt="青山 Logo" class="brand-logo-img">
+                            <span>青山</span>
+                        </div>
+                    </span>
+                    <span class="count">約 21 杯</span>
+                </div>
+            </div>
+            <p style="margin-top:20px;">一年之中，你總共和超過 50 間不同品牌有過交集。</p>
+        </div>
+
+        <!-- P12 -->
+        <div class="slide">
+            <h2>品牌忠誠度</h2>
+            <p>你與 <span class="highlight">得正</span> 的關係是</p>
+            <h3>專情又高頻</h3>
+            <p>其他品牌來來去去，但得正就是「那一杯」，永遠在清單上。</p>
+        </div>
+
+        <!-- P13 -->
+        <div class="slide">
+            <h2>味蕾記憶</h2>
+            <h1>Top 5<br>必點單品</h1>
+            <p>只要心情複雜，你就會下意識點開這幾個名字。</p>
+        </div>
+
+        <!-- P14 雙柚金烏龍 -->
+        <div class="slide">
+            <h2>年度主打歌</h2>
+            <div class="card">
+                <img src="De-Zheng.jpg" alt="得正 Logo" class="brand-logo-img">
+                <p style="font-size:0.95rem;">來自：得正 · 雙重水果系列</p>
+                <h3 style="font-size:3.2rem; margin-top:16px;">145 次</h3>
+                <h1 style="font-size: 1.9rem; margin-top:4px;">雙柚金烏龍</h1>
+                <p style="margin-top:10px;">它已經不只是飲料，是你的預設情緒解決方案。</p>
+            </div>
+        </div>
+
+        <!-- P15 其他品項 -->
+        <div class="slide">
+            <h2>常駐嘉賓</h2>
+            <div class="card">
+                <div class="list-item">
+                    <span class="rank">2</span>
+                    <span class="name">蘋果玉露青</span>
+                    <span class="count">約 35 杯</span>
+                </div>
+                <div class="list-item">
+                    <span class="rank">3</span>
+                    <span class="name">蘋果紅萱</span>
+                    <span class="count">約 23 杯</span>
+                </div>
+                <div class="list-item">
+                    <span class="rank">4</span>
+                    <span class="name">橘子柚花青茶</span>
+                    <span class="count">約 12 杯</span>
+                </div>
+                <div class="list-item">
+                    <span class="rank">5</span>
+                    <span class="name">朱槿普洱紅鮮奶茶</span>
+                    <span class="count">約 10 杯</span>
+                </div>
+            </div>
+            <p style="margin-top:20px;">水果＋茶的組合，幾乎是你的標配主題。</p>
+        </div>
+
+        <!-- P16 消費帶 -->
+        <div class="slide">
+            <h2>消費舒適區</h2>
+            <p>你最常停留的價位帶是</p>
+            <h3>$55 - $65</h3>
+            <p>多數選擇都落在這個區間，既要有質感，也不能太傷荷包。</p>
+            <p class="big-text">理性與享受之間拿捏得剛剛好。</p>
+        </div>
+
+        <!-- P17 人格 -->
+        <div class="slide">
+            <h2>2025 飲料人格</h2>
+            <div class="personality-type">精準探險家</div>
+            <p>Precision Explorer</p>
+            <div class="quote">
+                「你很清楚自己愛什麼（得正、雙柚金烏龍），也願意偶爾為新口味豪邁多付一點，確保每一杯都值得被記住。」
+            </div>
+            <div class="card" style="margin-top:26px;">
+                <p>✔️ 品牌偏好明確<br>✔️ 勇於嘗試高單價新口味<br>✔️ 水果茶與烏龍系是你的安全堡壘</p>
+            </div>
+        </div>
+
+        <!-- P18 結尾 -->
+        <div class="slide">
+            <h2>明年見</h2>
+            <p>感謝 2025 的每一杯陪伴你度過上下班、晴天與暴雨。</p>
+            <br>
+            <p class="big-text">願 2026，依然有好喝的飲料，也有更輕鬆的自己。</p>
+            <h1 style="margin-top:28px;">See you next year</h1>
+        </div>
+    </div>
+
+    <script>
+        const slides = document.querySelectorAll('.slide');
+        const progressContainer = document.getElementById('progressContainer');
+        const TOTAL_SLIDES = slides.length;
+        let currentSlide = 0;
+        let progressInterval;
+
+        for (let i = 0; i < TOTAL_SLIDES; i++) {
+            let bar = document.createElement('div');
+            bar.className = 'progress-bar';
+            let fill = document.createElement('div');
+            fill.className = 'progress-fill';
+            bar.appendChild(fill);
+            progressContainer.appendChild(bar);
+        }
+        const progressBars = document.querySelectorAll('.progress-fill');
+
+        function showSlide(index) {
+            clearInterval(progressInterval);
+
+            slides.forEach((slide, i) => {
+                slide.classList.remove('active');
+                if (i === index) slide.classList.add('active');
+            });
+
+            progressBars.forEach((bar, i) => {
+                bar.style.width = i < index ? '100%' : '0%';
+                bar.parentElement.classList.remove('active');
+            });
+
+            if (index < TOTAL_SLIDES) {
+                let bar = progressBars[index];
+                bar.parentElement.classList.add('active');
+                
+                let width = 0;
+                let duration = 5000;
+                let interval = 50;
+                let step = 100 / (duration / interval);
+
+                progressInterval = setInterval(() => {
+                    width += step;
+                    bar.style.width = width + '%';
+                    if (width >= 100) {
+                        clearInterval(progressInterval);
+                        nextSlide();
+                    }
+                }, interval);
+            }
+        }
+
+        function nextSlide() {
+            if (currentSlide < TOTAL_SLIDES - 1) {
+                currentSlide++;
+                showSlide(currentSlide);
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                showSlide(currentSlide);
+            }
+        }
+
+        const ctx = document.getElementById('monthlyChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(201,113,61,0.55)');
+        gradient.addColorStop(1, 'rgba(201,113,61,0)');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
+                datasets: [{
+                    label: '杯數',
+                    data: [35, 38, 42, 45, 60, 40, 45, 48, 55, 60, 75, 5],
+                    borderColor: '#c9713d',
+                    backgroundColor: gradient,
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks: { color: '#7b6a5c' }, grid: { display: false } },
+                    y: { display: false }
+                },
+                animation: { duration: 2000 }
+            }
+        });
+
+        showSlide(0);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+    </script>
+</body>
+</html>
